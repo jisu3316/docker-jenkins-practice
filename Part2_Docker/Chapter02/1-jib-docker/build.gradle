@@ -1,0 +1,71 @@
+plugins {
+  id 'java'
+  id 'org.springframework.boot' version '2.7.1'
+  id 'io.spring.dependency-management' version '1.0.12.RELEASE'
+  id 'com.google.cloud.tools.jib' version '3.3.1' // zip 플러그인
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf:2.7.1'
+	implementation 'org.springframework.boot:spring-boot-starter-web:2.7.1'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools:2.7.1'
+}
+
+repositories {
+  mavenCentral()
+}
+
+version = '0.0.1-SNAPSHOT'
+description = 'test-docker-spring-boot'
+group = 'com.test'
+
+java.sourceCompatibility = JavaVersion.VERSION_11
+
+jar {
+	enabled = false
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+// jib 빌드 태스크
+jib {
+  // 베이스 이미지 지정
+  from {
+//    자바 11을 쓰겠다.
+    image = 'adoptopenjdk/openjdk11:alpine-jre'
+  }
+  // 빌드 할 이미지의 정보를 어디로 할것인가.
+  to {
+    image = 'jisu3268/jib-test'
+    tags = ['1.0']
+  }
+  // 컨테이너 블록 안에는 도커파일 안에있는 여러가지 세팅값들을 볼 수 있다.
+  container {
+    // 컨테이너 실행되면서 바로 실행되는 명령어를 지정할 수 있다.
+    entrypoint = ['java', '-Dspring.profiles.active=test', '-jar', 'test-docker-spring-boot-0.0.1-SNAPSHOT.jar']
+
+    // 컨테이너가 실행되면서 사용할 환경변수를 지정할 수 있다.
+    jvmFlags = ['-Xms512m', '-Xmx512m', '-Xdebug', '-XshowSettings:vm', '-XX:+UnlockExperimentalVMOptions', '-XX:+UseContainerSupport']
+    // 컨테이너가 실행되면서 사용할 포트를 지정할 수 있다.
+    ports = ['8080']
+
+    // 컨테이너가 실행되면서 사용할 환경변수를 지정할 수 있다.
+    environment = [SPRING_OUTPUT_ANSI_ENABLED: "ALWAYS"]
+    // 컨테이너가 실행되면서 사용할 라벨을 지정할 수 있다.
+    labels = [version:project.version, name:project.name, group:project.group]
+
+    // 컨테이너가 실행되는 시간
+    creationTime = 'USE_CURRENT_TIMESTAMP'
+    format = 'Docker'
+  }
+  // 현재 어느 경로에서 jar파일을 가져올 것인가.
+  extraDirectories {
+    paths {
+      path {
+        from = file('build/libs')
+      }
+    }
+  }
+}
